@@ -1,0 +1,214 @@
+public class RemoveIteminPlayer extends OptionCase implements ConfigurationSerializable {
+
+	public RemoveIteminPlayer() {
+		setItemShow(ItemStackAdapter.LIGHT_BLUE_STAINED_GLASS_PANE);
+	}
+
+	private OptionVariable value;
+	private OptionVariable amount;
+	private boolean display = true;
+	private boolean lore = true;
+	private boolean enchant = true;
+	private boolean flag = true;
+
+	public ItemStack updateItem(ItemStack item) {
+		ItemMeta meta = super.updateItem(item).getItemMeta();
+		meta.setDisplayName(ChatColor.AQUA + getName());
+		List<String> lore = new ArrayList<String>();
+		lore.add(ChatColor.YELLOW + "Value: " + value);
+		lore.add(ChatColor.YELLOW + "Amount: " + amount);
+		lore.add(ChatColor.AQUA + "Condition-- ");
+		lore.add(ChatColor.RED + "1.Display: " + display);
+		lore.add(ChatColor.RED + "2.Lore: " + this.lore);
+		lore.add(ChatColor.RED + "3.Enchant: " + enchant);
+		lore.add(ChatColor.RED + "4.Flag: " + flag);
+		lore.add(ChatColor.AQUA + "");
+		lore.add(MessageOptionMenu.LEFT_FOR_SET_VAULE.toString("value"));
+		lore.add(MessageOptionMenu.RIGHT_FOR_SET_VAULE.toString("amount"));
+		lore.add(MessageOptionMenu.SHIFT_LEFT_FOR_REMOVE_VALUE.toString("value"));
+		lore.add(MessageOptionMenu.SHIFT_RIGHT_FOR_REMOVE_VALUE.toString("amount"));
+		lore.add(MessageOptionMenu.NUMBER_FOR_CHANGE_VALUE.toString("display lore enchant flag"));
+		lore.add(MessageOptionMenu.VARIABLE_IS_ONLY_2VAR.toString("Value", "ItemStack"));
+		lore.add(MessageOptionMenu.VARIABLE_IS_ONLY_2VAR.toString("Amount", "Number"));
+		meta.setLore(lore);
+		item.setItemMeta(meta);
+		return item;
+	}
+
+	public ItemStack getItem(MenuEdit edit) {
+		return super.getItem(edit);
+	}
+
+	@Override
+	public String getName() {
+		return ChatColor.AQUA + "Remove Item in Player :Case";
+	}
+
+	@Override
+	public String toString() {
+		return "RemoveItem(" + this.value + ")";
+	}
+
+	@Override
+	public void Action(ClicktoItemOption e) {
+		MenuEdit menuedit = e.getMenuEdit();
+		if (e.getClicktype() == ClickType.LEFT || e.getClicktype() == ClickType.RIGHT) {
+			if (e.getItemset() != null && e.getItemset().getType() != Material.AIR) {
+				e.setCancel(true);
+				Object obj = MenuEdit.ItemtoOpton(e.getItemset(), OptionVariable.class);
+				if (obj == null) {
+					return;
+				}
+				if (obj instanceof OptionVariable) {
+					OptionVariable var = (OptionVariable) obj;
+					if (!var.caninsert()) {
+						return;
+					}
+					if (e.getClicktype() == ClickType.LEFT) {
+						if (var.Type() != TypeVariable.ITEMSTACK) {
+							return;
+						}
+						value = var;
+						e.setItemset(null);
+					} else if (e.getClicktype() == ClickType.RIGHT) {
+						if (var.Type() != TypeVariable.NUMBER) {
+							return;
+						}
+						amount = var;
+						e.setItemset(null);
+					}
+					var.Remove(menuedit);
+					e.setItemuse(updateItem(e.getItemuse()));
+				}
+				return;
+			}
+
+		}
+
+		if (e.getClicktype() == ClickType.SHIFT_LEFT || e.getClicktype() == ClickType.SHIFT_RIGHT) {
+			if (e.getClicktype() == ClickType.SHIFT_LEFT) {
+				if (this.value != null) {
+					e.setItemset(this.value.getItem(e.getMenuEdit()));
+					this.value = null;
+					e.setItemuse(updateItem(e.getItemuse()));
+				}
+			} else if (e.getClicktype() == ClickType.SHIFT_RIGHT) {
+				if (this.amount != null) {
+					e.setItemset(this.amount.getItem(e.getMenuEdit()));
+					this.amount = null;
+					e.setItemuse(updateItem(e.getItemuse()));
+				}
+			}
+			e.setCancel(true);
+			return;
+		}
+
+		if (e.getClicktype() == ClickType.NUMBER_KEY) {
+			if (e.getHotbar() == 0) {
+				display = !display;
+			} else if (e.getHotbar() == 1) {
+				lore = !lore;
+			} else if (e.getHotbar() == 2) {
+				enchant = !enchant;
+			} else if (e.getHotbar() == 3) {
+				flag = !flag;
+			}
+			e.setItemuse(updateItem(e.getItemuse()));
+			e.setCancel(true);
+			return;
+		}
+
+	}
+
+	@Override
+	public Map<String, Object> serialize() {
+		Map<String, Object> args = new HashMap<String, Object>();
+		if (this.value != null) {
+			args.put("value", this.value);
+		}
+		if (this.amount != null) {
+			args.put("amount", this.amount);
+		}
+		args.put("display", this.display);
+		args.put("lore", this.lore);
+		args.put("enchant", this.enchant);
+		args.put("flag", this.flag);
+		return args;
+	}
+
+	public static RemoveIteminPlayer deserialize(Map<String, Object> args) {
+		RemoveIteminPlayer stack = new RemoveIteminPlayer();
+		if (args.containsKey("value")) {
+			stack.value = (OptionVariable) args.get("value");
+		}
+		if (args.containsKey("amount")) {
+			stack.amount = (OptionVariable) args.get("amount");
+		}
+		stack.display = (boolean) args.get("display");
+		stack.lore = (boolean) args.get("lore");
+		stack.enchant = (boolean) args.get("enchant");
+		stack.flag = (boolean) args.get("flag");
+		return stack;
+	}
+
+	public OptionVariable getValue() {
+		return value;
+	}
+
+	public void setValue(OptionVariable value) {
+		this.value = value;
+	}
+
+	@Override
+	public void Action(UseingEventInventory e) throws Exception {
+		int amount = 1;
+		if (this.amount != null) {
+			amount = (int) Data.getValueNumber(this.amount.getValueActive(e));
+		}
+		ItemStack v = (ItemStack) this.value.getValueActive(e);
+		PlayerInventory inv = e.getPlayer().getInventory();
+		HashMap<Integer, ? extends ItemStack> m = inv.all(v.getType());
+		HashMap<Integer, ItemStack> m2 = new HashMap<Integer, ItemStack>();
+		int size = 0;
+		for (Integer i : m.keySet()) {
+			ItemStack is = m.get(i);
+			if (Data.CheckItemMeta(display, lore, enchant, flag, v.getItemMeta(), is.getItemMeta())) {
+				size = size + is.getAmount();
+				m2.put(i, is);
+			}
+		}
+		if (size >= amount) {
+			for (Integer i : m2.keySet()) {
+				ItemStack item = m2.get(i);
+				int kd = item.getAmount();
+				if (item.getAmount() >= amount) {
+					item.setAmount(item.getAmount() - amount);
+					inv.setItem(i, item);
+				} else {
+					inv.setItem(i, null);
+				}
+				amount = amount - kd;
+				if (0 >= amount) {
+					return;
+				}
+			}
+		}
+	}
+
+	@Override
+	public OptionCase CloneOption() {
+		RemoveIteminPlayer hasIteminPlayer = new RemoveIteminPlayer();
+		if (this.value != null) {
+			hasIteminPlayer.value = this.value.CloneOption();
+		}
+		if (this.amount != null) {
+			hasIteminPlayer.amount = this.amount.CloneOption();
+		}
+		hasIteminPlayer.display = this.display;
+		hasIteminPlayer.lore = this.lore;
+		hasIteminPlayer.enchant = this.enchant;
+		hasIteminPlayer.flag = this.flag;
+		return hasIteminPlayer;
+	}
+
+}
